@@ -1,0 +1,24 @@
+<RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="16dp"
+        tools:context=".MainActivity">
+
+    <com.deange.ropeprogressview.RopeProgressView
+            style="?android:attr/progressBarStyleHorizontal"
+            android:id="@+id/rope_progress_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="1000"/>
+
+    <SeekBar
+            android:id="@+id/progress_slider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:max="1000"/>
+
+</RelativeLayout>
