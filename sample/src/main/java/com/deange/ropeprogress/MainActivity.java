@@ -6,7 +6,10 @@ import android.widget.SeekBar;
 
 import com.deange.ropeprogressview.RopeProgressView;
 
-public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBarChangeListener {
+public class MainActivity
+        extends AppCompatActivity
+        implements
+        SeekBar.OnSeekBarChangeListener {
 
     private RopeProgressView mRopeView;
 

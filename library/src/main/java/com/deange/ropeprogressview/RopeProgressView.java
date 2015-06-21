@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.CornerPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -26,6 +27,7 @@ public class RopeProgressView extends ProgressBar {
     private int mSecondaryColor;
     private float mSlack;
 
+    private final Rect mBounds = new Rect();
     private final Path mBubble = new Path();
     private final Path mTriangle = new Path();
 
@@ -100,6 +102,8 @@ public class RopeProgressView extends ProgressBar {
     @Override
     protected synchronized void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
 
+        calculateBounds();
+
         final int bubbleHeight = (int) Math.ceil(getBubbleVerticalDisplacement());
 
         final float strokeWidth = getStrokeWidth();
@@ -129,9 +133,11 @@ public class RopeProgressView extends ProgressBar {
         final float slackHeight = perp(offset) * getSlack();
         final float progressEnd = lerp(left, end, offset);
 
+        // Draw the secondary background line
         mLinesPaint.setColor(mSecondaryColor);
         canvas.drawLine(progressEnd, top + slackHeight, end, top, mLinesPaint);
 
+        // Draw the primary progress line
         mLinesPaint.setColor(mPrimaryColor);
         if (progressEnd == left) {
             // Draw the highlghted part as small as possible
@@ -143,33 +149,35 @@ public class RopeProgressView extends ProgressBar {
             canvas.drawLine(left, top, progressEnd, top + slackHeight, mLinesPaint);
         }
 
+        // Draw the bubble text background
         final float bubbleWidth = getBubbleWidth();
         final float bubbleHeight = getBubbleHeight();
 
         final float bubbleLeft = Math.min(
                 getWidth() - bubbleWidth, Math.max(
                         0, progressEnd - (bubbleWidth / 2)));
-
         final float bubbleTop = slackHeight;
-        final float textX = bubbleLeft + bubbleWidth / 2;
-        final float textY = bubbleTop + bubbleHeight - dips(5);
 
+        mBubble.offset(bubbleLeft, bubbleTop);
+        canvas.drawPath(mBubble, mBubblePaint);
+        mBubble.offset(-bubbleLeft, -bubbleTop);
+
+        // Draw the triangle part of the bubble
         final float triangleLeft = Math.min(
                 getWidth() - getTriangleWidth(), Math.max(
                         0, progressEnd - (getTriangleWidth() / 2)));
         final float triangleTop = bubbleTop + bubbleHeight;
 
-        mBubble.offset(bubbleLeft, bubbleTop);
         mTriangle.offset(triangleLeft, triangleTop);
-
-        final String progress = String.valueOf(getProgress());
-        canvas.drawPath(mBubble, mBubblePaint);
         canvas.drawPath(mTriangle, mBubblePaint);
-        canvas.drawText(progress, textX, textY, mTextPaint);
-
-        // Return points back to normal location
-        mBubble.offset(-bubbleLeft, -bubbleTop);
         mTriangle.offset(-triangleLeft, -triangleTop);
+
+        // Draw the progress text part of the bubble
+        final float textX = bubbleLeft + bubbleWidth / 2;
+        final float textY = bubbleTop + bubbleHeight - dips(8);
+        final String progress = String.valueOf(getProgress());
+
+        canvas.drawText(progress, textX, textY, mTextPaint);
     }
 
     private float getBubbleVerticalDisplacement() {
@@ -181,15 +189,11 @@ public class RopeProgressView extends ProgressBar {
     }
 
     private float getBubbleWidth() {
-        //noinspection ReplaceAllDot
-        final String maxString = String.valueOf(getMax()).replaceAll(".", "8");
-        final float maxSize = mTextPaint.measureText(maxString);
-
-        return maxSize + /* padding */ dips(16);
+        return mBounds.width() + /* padding */ dips(16);
     }
 
     private float getBubbleHeight() {
-        return getBubbleWidth() / 2;
+        return mBounds.height() + /* padding */ dips(16);
     }
 
     private float getTriangleWidth() {
@@ -198,6 +202,12 @@ public class RopeProgressView extends ProgressBar {
 
     private float getTriangleHeight() {
         return dips(6);
+    }
+
+    private void calculateBounds() {
+        //noinspection ReplaceAllDot
+        final String maxString = String.valueOf(getMax()).replaceAll(".", "8");
+        mTextPaint.getTextBounds(maxString, 0, maxString.length(), mBounds);
     }
 
     public void makeBubble() {
@@ -261,6 +271,18 @@ public class RopeProgressView extends ProgressBar {
 
     public float getStrokeWidth() {
         return mLinesPaint.getStrokeWidth();
+    }
+
+    public void setTextPaint(final Paint paint) {
+        mTextPaint.set(paint);
+
+        requestLayout();
+        invalidate();
+    }
+
+    /** Return a copy so that fields can only be modified through {@link #setTextPaint} */
+    public Paint getTextPaint() {
+        return new Paint(mTextPaint);
     }
 
     private float perp(float t) {
