@@ -11,6 +11,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.widget.ProgressBar;
@@ -26,10 +27,18 @@ public class RopeProgressView extends ProgressBar {
     private int mPrimaryColor;
     private int mSecondaryColor;
     private float mSlack;
+    private boolean mDynamicLayout;
 
     private final Rect mBounds = new Rect();
     private final Path mBubble = new Path();
     private final Path mTriangle = new Path();
+
+    private final Runnable mRequestLayoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            requestLayout();
+        }
+    };
 
     public RopeProgressView(final Context context) {
         this(context, null);
@@ -46,6 +55,7 @@ public class RopeProgressView extends ProgressBar {
 
         float width = dips(8);
         float slack = dips(32);
+        boolean dynamicLayout = false;
 
         int primaryColor = 0xFF009688;
         int secondaryColor = 0xFFDADADA;
@@ -67,6 +77,7 @@ public class RopeProgressView extends ProgressBar {
             secondaryColor = a.getColor(R.styleable.RopeProgressView_secondaryColor, secondaryColor);
             slack = a.getDimension(R.styleable.RopeProgressView_slack, slack);
             width = a.getDimension(R.styleable.RopeProgressView_strokeWidth, width);
+            dynamicLayout = a.getBoolean(R.styleable.RopeProgressView_dynamicLayout, false);
 
             a.recycle();
         }
@@ -74,6 +85,7 @@ public class RopeProgressView extends ProgressBar {
         mPrimaryColor = primaryColor;
         mSecondaryColor = secondaryColor;
         mSlack = slack;
+        mDynamicLayout = dynamicLayout;
 
         mLinesPaint.setStrokeWidth(width);
         mLinesPaint.setStyle(Paint.Style.STROKE);
@@ -100,15 +112,33 @@ public class RopeProgressView extends ProgressBar {
     }
 
     @Override
+    public synchronized void setProgress(final int progress) {
+        final int clampedProgress = Math.max(0, Math.min(getMax(), progress));
+        if (mDynamicLayout && clampedProgress != getProgress()) {
+            if (Looper.getMainLooper() == Looper.myLooper()) {
+                requestLayout();
+            } else {
+                post(mRequestLayoutRunnable);
+            }
+        }
+
+        super.setProgress(progress);
+    }
+
+    @Override
     protected synchronized void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
 
-        calculateBounds();
+        // Recalculate how tall the text needs to be
+        //noinspection ReplaceAllDot
+        final String maxString = String.valueOf(getMax()).replaceAll(".", "8");
+        mTextPaint.getTextBounds(maxString, 0, maxString.length(), mBounds);
 
         final int bubbleHeight = (int) Math.ceil(getBubbleVerticalDisplacement());
+        final float slack = mDynamicLayout ? getCurrentSlackHeight() : getSlack();
 
         final float strokeWidth = getStrokeWidth();
         final int dw = (int) Math.ceil(getPaddingLeft() + getPaddingRight() + strokeWidth);
-        final int dh = (int) Math.ceil(getPaddingTop() + getPaddingBottom() + strokeWidth + mSlack);
+        final int dh = (int) Math.ceil(getPaddingTop() + getPaddingBottom() + strokeWidth + slack);
 
         setMeasuredDimension(
                 resolveSizeAndState(dw, widthMeasureSpec, 0),
@@ -130,7 +160,7 @@ public class RopeProgressView extends ProgressBar {
 
         final float max = getMax();
         final float offset = (max == 0) ? 0 : (getProgress() / max);
-        final float slackHeight = perp(offset) * getSlack();
+        final float slackHeight = getCurrentSlackHeight();
         final float progressEnd = lerp(left, end, offset);
 
         // Draw the secondary background line
@@ -180,37 +210,37 @@ public class RopeProgressView extends ProgressBar {
         canvas.drawText(progress, textX, textY, mTextPaint);
     }
 
+    private float getCurrentSlackHeight() {
+        final float max = getMax();
+        final float offset = (max == 0) ? 0 : (getProgress() / max);
+        return perp(offset) * getSlack();
+    }
+
     private float getBubbleVerticalDisplacement() {
         return getBubbleMargin() + getBubbleHeight() + getTriangleHeight();
     }
 
-    private float getBubbleMargin() {
+    public float getBubbleMargin() {
         return dips(4);
     }
 
-    private float getBubbleWidth() {
+    public float getBubbleWidth() {
         return mBounds.width() + /* padding */ dips(16);
     }
 
-    private float getBubbleHeight() {
+    public float getBubbleHeight() {
         return mBounds.height() + /* padding */ dips(16);
     }
 
-    private float getTriangleWidth() {
+    public float getTriangleWidth() {
         return dips(12);
     }
 
-    private float getTriangleHeight() {
+    public float getTriangleHeight() {
         return dips(6);
     }
 
-    private void calculateBounds() {
-        //noinspection ReplaceAllDot
-        final String maxString = String.valueOf(getMax()).replaceAll(".", "8");
-        mTextPaint.getTextBounds(maxString, 0, maxString.length(), mBounds);
-    }
-
-    public void makeBubble() {
+    private void makeBubble() {
 
         final float bubbleWidth = getBubbleWidth();
         final float bubbleHeight = getBubbleHeight();
@@ -229,6 +259,15 @@ public class RopeProgressView extends ProgressBar {
         mBubble.reset();
         mBubble.moveTo(0, 0);
         mBubble.addRect(0, 0, bubbleWidth, bubbleHeight, Path.Direction.CW);
+    }
+
+    public void setDynamicLayout(final boolean isDynamic) {
+        if (mDynamicLayout != isDynamic) {
+            mDynamicLayout = isDynamic;
+
+            requestLayout();
+            invalidate();
+        }
     }
 
     public void setPrimaryColor(final int color) {

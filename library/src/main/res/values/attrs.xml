@@ -6,6 +6,7 @@
         <attr name="secondaryColor" format="color"/>
         <attr name="slack" format="dimension"/>
         <attr name="strokeWidth" format="dimension"/>
+        <attr name="dynamicLayout" format="boolean"/>
     </declare-styleable>
 
 </resources>
