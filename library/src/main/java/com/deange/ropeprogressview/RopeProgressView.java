@@ -23,6 +23,7 @@ public class RopeProgressView extends ProgressBar {
     private final Paint mTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final float m1Dip;
+    private final float m1Sp;
 
     private int mPrimaryColor;
     private int mSecondaryColor;
@@ -52,6 +53,7 @@ public class RopeProgressView extends ProgressBar {
         super(context, attrs, defStyleAttr);
 
         m1Dip = getResources().getDisplayMetrics().density;
+        m1Sp = getResources().getDisplayMetrics().scaledDensity;
 
         float width = dips(8);
         float slack = dips(32);
@@ -96,7 +98,7 @@ public class RopeProgressView extends ProgressBar {
         mBubblePaint.setPathEffect(new CornerPathEffect(dips(2)));
 
         mTextPaint.setColor(Color.BLACK);
-        mTextPaint.setTextSize(dips(16));
+        mTextPaint.setTextSize(sp(18));
         mTextPaint.setTextAlign(Paint.Align.CENTER);
         mTextPaint.setTypeface(Typeface.create("sans-serif-condensed-light", 0));
 
@@ -319,7 +321,9 @@ public class RopeProgressView extends ProgressBar {
         invalidate();
     }
 
-    /** Return a copy so that fields can only be modified through {@link #setTextPaint} */
+    /**
+     * Return a copy so that fields can only be modified through {@link #setTextPaint}
+     */
     public Paint getTextPaint() {
         return new Paint(mTextPaint);
     }
@@ -336,6 +340,10 @@ public class RopeProgressView extends ProgressBar {
 
     private float dips(final float dips) {
         return dips * m1Dip;
+    }
+
+    private float sp(final int sp) {
+        return sp * m1Sp;
     }
 
 }
