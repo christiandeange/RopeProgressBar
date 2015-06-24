@@ -14,9 +14,9 @@ import android.os.Build;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.TypedValue;
-import android.widget.ProgressBar;
+import android.view.View;
 
-public class RopeProgressView extends ProgressBar {
+public class RopeProgressBar extends View {
 
     private final Paint mBubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mLinesPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -24,6 +24,8 @@ public class RopeProgressView extends ProgressBar {
 
     private final float m1Dip;
     private final float m1Sp;
+    private int mProgress;
+    private int mMax;
 
     private int mPrimaryColor;
     private int mSecondaryColor;
@@ -41,19 +43,22 @@ public class RopeProgressView extends ProgressBar {
         }
     };
 
-    public RopeProgressView(final Context context) {
+    public RopeProgressBar(final Context context) {
         this(context, null);
     }
 
-    public RopeProgressView(final Context context, final AttributeSet attrs) {
+    public RopeProgressBar(final Context context, final AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public RopeProgressView(final Context context, final AttributeSet attrs, final int defStyleAttr) {
+    public RopeProgressBar(final Context context, final AttributeSet attrs, final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
         m1Dip = getResources().getDisplayMetrics().density;
         m1Sp = getResources().getDisplayMetrics().scaledDensity;
+
+        int max = 0;
+        int progress = 0;
 
         float width = dips(8);
         float slack = dips(32);
@@ -72,14 +77,17 @@ public class RopeProgressView extends ProgressBar {
         }
 
         final TypedArray a = context.obtainStyledAttributes(
-                attrs, R.styleable.RopeProgressView, defStyleAttr, 0);
+                attrs, R.styleable.RopeProgressBar, defStyleAttr, 0);
 
         if (a != null) {
-            primaryColor = a.getColor(R.styleable.RopeProgressView_primaryColor, primaryColor);
-            secondaryColor = a.getColor(R.styleable.RopeProgressView_secondaryColor, secondaryColor);
-            slack = a.getDimension(R.styleable.RopeProgressView_slack, slack);
-            width = a.getDimension(R.styleable.RopeProgressView_strokeWidth, width);
-            dynamicLayout = a.getBoolean(R.styleable.RopeProgressView_dynamicLayout, false);
+            max = a.getInt(R.styleable.RopeProgressBar_max, max);
+            progress = a.getInt(R.styleable.RopeProgressBar_progress, progress);
+
+            primaryColor = a.getColor(R.styleable.RopeProgressBar_primaryColor, primaryColor);
+            secondaryColor = a.getColor(R.styleable.RopeProgressBar_secondaryColor, secondaryColor);
+            slack = a.getDimension(R.styleable.RopeProgressBar_slack, slack);
+            width = a.getDimension(R.styleable.RopeProgressBar_strokeWidth, width);
+            dynamicLayout = a.getBoolean(R.styleable.RopeProgressBar_dynamicLayout, false);
 
             a.recycle();
         }
@@ -102,9 +110,9 @@ public class RopeProgressView extends ProgressBar {
         mTextPaint.setTextAlign(Paint.Align.CENTER);
         mTextPaint.setTypeface(Typeface.create("sans-serif-condensed-light", 0));
 
+        setMax(max);
+        setProgress(progress);
         setLayerType(LAYER_TYPE_SOFTWARE, null);
-        setIndeterminate(false);
-        setBackgroundDrawable(null);
     }
 
     @SuppressWarnings("deprecation")
@@ -113,18 +121,15 @@ public class RopeProgressView extends ProgressBar {
         super.setBackgroundDrawable(null);
     }
 
-    @Override
-    public synchronized void setProgress(final int progress) {
-        final int clampedProgress = Math.max(0, Math.min(getMax(), progress));
-        if (mDynamicLayout && clampedProgress != getProgress()) {
+    private void dynamicRequestLayout() {
+        if (mDynamicLayout) {
+            // We need to calculate our new height, since the progress affect the slack
             if (Looper.getMainLooper() == Looper.myLooper()) {
                 requestLayout();
             } else {
                 post(mRequestLayoutRunnable);
             }
         }
-
-        super.setProgress(progress);
     }
 
     @Override
@@ -261,6 +266,40 @@ public class RopeProgressView extends ProgressBar {
         mBubble.reset();
         mBubble.moveTo(0, 0);
         mBubble.addRect(0, 0, bubbleWidth, bubbleHeight, Path.Direction.CW);
+    }
+
+    public synchronized void setProgress(int progress) {
+        progress = Math.max(0, Math.min(getMax(), progress));
+        if (progress == mProgress) {
+            return;
+        }
+
+        dynamicRequestLayout();
+        mProgress = progress;
+        postInvalidate();
+    }
+
+    public int getProgress() {
+        return mProgress;
+    }
+
+    public void setMax(int max) {
+        max = Math.max(0, max);
+
+        if (max != mMax) {
+
+            dynamicRequestLayout();
+            mMax = max;
+            postInvalidate();
+
+            if (mProgress > max) {
+                mProgress = max;
+            }
+        }
+    }
+
+    public int getMax() {
+        return mMax;
     }
 
     public void setDynamicLayout(final boolean isDynamic) {
