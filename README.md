@@ -7,15 +7,18 @@ Android ProgressBar that "bends" under its own weight. Inspired by http://drbl.i
 ---
 ###Attributes
 
-| Attribute            | Type      | Usage                                                        |
-| -------------------- | --------- | ------------------------------------------------------------ |
-| `app:max`            | integer   | The max value of the progress bar                            |
-| `app:progress`       | integer   | The current value of the progress bar                        |
-| `app:primaryColor`   | color     | Color used for the progress completed                        |
-| `app:secondaryColor` | color     | Color used for the progress remaining                        |
-| `app:slack`          | dimension | The max vertical "bend" of the progress bar                  |
-| `app:strokeWidth`    | dimension | The width of the progress bar line                           |
-| `app:dynamicLayout`  | boolean   | If the progress bar should change in height as slack changes |
+| Attribute            | Type      | Default                       | Usage                                                        |
+| -------------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
+| `app:max`            | integer   | 0                             | The max value of the progress bar                            |
+| `app:progress`       | integer   | 0                             | The current value of the progress bar                        |
+| `app:primaryColor`   | color     | `@attr/colorControlActivated` | Color used for the progress completed                        |
+| `app:secondaryColor` | color     | `@attr/colorControlHighlight` | Color used for the progress remaining                        |
+| `app:slack`          | dimension | 32dp                          | The max vertical "bend" of the progress bar                  |
+| `app:strokeWidth`    | dimension | 8dp                           | The width of the progress bar line                           |
+| `app:dynamicLayout`  | boolean   | false                         | If the progress bar should change in height as slack changes |
+
+*Note: Pre-Lollipop, `app:primaryColor` defaults to [#009688](http://www.color-hex.com/color/009688) and `app:secondaryColor` defaults to [#DADADA](http://www.color-hex.com/color/dadada)*
+
 
 ---
 ###Download
