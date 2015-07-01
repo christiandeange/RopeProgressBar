@@ -31,6 +31,7 @@ public class RopeProgressBar extends View {
     private int mSecondaryColor;
     private float mSlack;
     private boolean mDynamicLayout;
+    private ProgressFormatter mFormatter;
 
     private final Rect mBounds = new Rect();
     private final Path mBubble = new Path();
@@ -135,10 +136,9 @@ public class RopeProgressBar extends View {
     @Override
     protected synchronized void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
 
-        // Recalculate how tall the text needs to be
-        //noinspection ReplaceAllDot
-        final String maxString = String.valueOf(getMax()).replaceAll(".", "8");
-        mTextPaint.getTextBounds(maxString, 0, maxString.length(), mBounds);
+        // Recalculate how tall the text needs to be, width is ignored
+        final String progress = getBubbleText();
+        mTextPaint.getTextBounds(progress, 0, progress.length(), mBounds);
 
         final int bubbleHeight = (int) Math.ceil(getBubbleVerticalDisplacement());
         final float slack = mDynamicLayout ? getCurrentSlackHeight() : getSlack();
@@ -151,7 +151,12 @@ public class RopeProgressBar extends View {
                 resolveSizeAndState(dw, widthMeasureSpec, 0),
                 resolveSizeAndState(dh + bubbleHeight, heightMeasureSpec, 0));
 
-        makeBubble();
+        // Make the triangle Path
+        mTriangle.reset();
+        mTriangle.moveTo(0, 0);
+        mTriangle.lineTo(getTriangleWidth(), 0);
+        mTriangle.lineTo(getTriangleWidth() / 2f, getTriangleHeight());
+        mTriangle.lineTo(0, 0);
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
@@ -186,35 +191,42 @@ public class RopeProgressBar extends View {
             canvas.drawLine(left, top, progressEnd, top + slackHeight, mLinesPaint);
         }
 
+        final String progress = getBubbleText();
+        mTextPaint.getTextBounds(progress, 0, progress.length(), mBounds);
+
         // Draw the bubble text background
         final float bubbleWidth = getBubbleWidth();
         final float bubbleHeight = getBubbleHeight();
+        mBubble.reset();
+        mBubble.addRect(0, 0, bubbleWidth, bubbleHeight, Path.Direction.CW);
 
         final float bubbleLeft = Math.min(
                 getWidth() - bubbleWidth, Math.max(
                         0, progressEnd - (bubbleWidth / 2)));
         final float bubbleTop = slackHeight;
 
-        mBubble.offset(bubbleLeft, bubbleTop);
+        final int saveCount = canvas.save();
+        canvas.translate(bubbleLeft, bubbleTop);
+
         canvas.drawPath(mBubble, mBubblePaint);
-        mBubble.offset(-bubbleLeft, -bubbleTop);
 
         // Draw the triangle part of the bubble
         final float triangleLeft = Math.min(
-                getWidth() - getTriangleWidth(), Math.max(
-                        0, progressEnd - (getTriangleWidth() / 2)));
-        final float triangleTop = bubbleTop + bubbleHeight;
+                getWidth() - getTriangleWidth(),
+                Math.max(0, progressEnd - (getTriangleWidth() / 2) - bubbleLeft));
+        final float triangleTop = bubbleHeight;
 
         mTriangle.offset(triangleLeft, triangleTop);
         canvas.drawPath(mTriangle, mBubblePaint);
         mTriangle.offset(-triangleLeft, -triangleTop);
 
         // Draw the progress text part of the bubble
-        final float textX = bubbleLeft + bubbleWidth / 2;
-        final float textY = bubbleTop + bubbleHeight - dips(8);
-        final String progress = String.valueOf(getProgress());
+        final float textX = bubbleWidth / 2;
+        final float textY = bubbleHeight - dips(8);
 
         canvas.drawText(progress, textX, textY, mTextPaint);
+
+        canvas.restoreToCount(saveCount);
     }
 
     private float getCurrentSlackHeight() {
@@ -247,25 +259,14 @@ public class RopeProgressBar extends View {
         return dips(6);
     }
 
-    private void makeBubble() {
+    public String getBubbleText() {
+        if (mFormatter != null) {
+            return mFormatter.getFormattedText(getProgress(), getMax());
 
-        final float bubbleWidth = getBubbleWidth();
-        final float bubbleHeight = getBubbleHeight();
-
-        final float triangleWidth = getTriangleWidth();
-        final float triangleHeight = getTriangleHeight();
-        final float triangleTop = 0;
-        final float triangleLeft = 0;
-
-        mTriangle.reset();
-        mTriangle.moveTo(triangleLeft, triangleTop);
-        mTriangle.lineTo(triangleLeft + triangleWidth, triangleTop);
-        mTriangle.lineTo(triangleLeft + triangleWidth / 2f, triangleHeight);
-        mTriangle.lineTo(triangleLeft, triangleTop);
-
-        mBubble.reset();
-        mBubble.moveTo(0, 0);
-        mBubble.addRect(0, 0, bubbleWidth, bubbleHeight, Path.Direction.CW);
+        } else {
+            final int progress = (int) (100 * getProgress() / (float) getMax());
+            return progress + "%";
+        }
     }
 
     public synchronized void setProgress(int progress) {
@@ -355,6 +356,13 @@ public class RopeProgressBar extends View {
 
     public void setTextPaint(final Paint paint) {
         mTextPaint.set(paint);
+
+        requestLayout();
+        invalidate();
+    }
+
+    public void setProgressFormatter(final ProgressFormatter formatter) {
+        mFormatter = formatter;
 
         requestLayout();
         invalidate();
