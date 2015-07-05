@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">RopeProgressBar</string>
+    <string name="text_animate_to">Animate to:</string>
+    <string name="default_progress">0</string>
+    <string name="button_go">Go!</string>
+    <string name="activity_static">Static Height</string>
+    <string name="activity_dynamic">Dynamic Height</string>
+    <string name="activity_themed">Themed</string>
+    <string name="activity_custom">Custom Text</string>
 </resources>
