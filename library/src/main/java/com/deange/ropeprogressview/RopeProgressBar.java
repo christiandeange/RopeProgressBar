@@ -1,5 +1,8 @@
 package com.deange.ropeprogressview;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -15,6 +18,8 @@ import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.Interpolator;
 
 public class RopeProgressBar extends View {
 
@@ -37,6 +42,12 @@ public class RopeProgressBar extends View {
     private final Path mBubble = new Path();
     private final Path mTriangle = new Path();
 
+    private static final Interpolator INTERPOLATOR = new DampingInterpolator(5);
+    private ValueAnimator mAnimator;
+    private float mSlackBounce;
+    private int mStartProgress;
+    private boolean mDeferred;
+
     private final Runnable mRequestLayoutRunnable = new Runnable() {
         @Override
         public void run() {
@@ -52,7 +63,10 @@ public class RopeProgressBar extends View {
         this(context, attrs, 0);
     }
 
-    public RopeProgressBar(final Context context, final AttributeSet attrs, final int defStyleAttr) {
+    public RopeProgressBar(
+            final Context context,
+            final AttributeSet attrs,
+            final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
         m1Dip = getResources().getDisplayMetrics().density;
@@ -116,12 +130,6 @@ public class RopeProgressBar extends View {
         setLayerType(LAYER_TYPE_SOFTWARE, null);
     }
 
-    @SuppressWarnings("deprecation")
-    @Override
-    public void setBackgroundDrawable(final Drawable background) {
-        super.setBackgroundDrawable(null);
-    }
-
     private void dynamicRequestLayout() {
         if (mDynamicLayout) {
             // We need to calculate our new height, since the progress affect the slack
@@ -141,7 +149,7 @@ public class RopeProgressBar extends View {
         mTextPaint.getTextBounds(progress, 0, progress.length(), mBounds);
 
         final int bubbleHeight = (int) Math.ceil(getBubbleVerticalDisplacement());
-        final float slack = mDynamicLayout ? getCurrentSlackHeight() : getSlack();
+        final float slack = mDynamicLayout ? getCurrentSlackHeight() : getSlack() + getSlackBounce();
 
         final float strokeWidth = getStrokeWidth();
         final int dw = (int) Math.ceil(getPaddingLeft() + getPaddingRight() + strokeWidth);
@@ -203,7 +211,7 @@ public class RopeProgressBar extends View {
         final float bubbleLeft = Math.min(
                 getWidth() - bubbleWidth, Math.max(
                         0, progressEnd - (bubbleWidth / 2)));
-        final float bubbleTop = slackHeight;
+        final float bubbleTop = Math.max(slackHeight, 0);
 
         final int saveCount = canvas.save();
         canvas.translate(bubbleLeft, bubbleTop);
@@ -232,7 +240,7 @@ public class RopeProgressBar extends View {
     private float getCurrentSlackHeight() {
         final float max = getMax();
         final float offset = (max == 0) ? 0 : (getProgress() / max);
-        return perp(offset) * getSlack();
+        return perp(offset) * (getSlack() + mSlackBounce);
     }
 
     private float getBubbleVerticalDisplacement() {
@@ -259,6 +267,10 @@ public class RopeProgressBar extends View {
         return dips(6);
     }
 
+    public float getSlackBounce() {
+        return dips(4);
+    }
+
     public String getBubbleText() {
         if (mFormatter != null) {
             return mFormatter.getFormattedText(getProgress(), getMax());
@@ -269,15 +281,88 @@ public class RopeProgressBar extends View {
         }
     }
 
+    public void defer() {
+        if (!mDeferred) {
+            mDeferred = true;
+            mStartProgress = getProgress();
+        }
+    }
+
+    public void endDefer() {
+        if (mDeferred) {
+            mDeferred = false;
+            bounceAnimation(mStartProgress);
+        }
+    }
+
     public synchronized void setProgress(int progress) {
         progress = Math.max(0, Math.min(getMax(), progress));
         if (progress == mProgress) {
             return;
         }
 
+        if (!mDeferred) {
+            bounceAnimation(progress);
+        }
+
         dynamicRequestLayout();
         mProgress = progress;
         postInvalidate();
+    }
+
+    public void animateProgress(int progress) {
+        // Speed of animation is interpolated from 0 --> MAX in 2s
+        // Minimum time duration is 500ms because anything faster than that is waaaay too quick
+        progress = Math.max(0, Math.min(getMax(), progress));
+        final int diff = Math.abs(getProgress() - progress);
+        final long duration = Math.max(500L, (long) (2000L * (diff / (float) getMax())));
+
+        final ValueAnimator animator = ValueAnimator.ofInt(getProgress(), progress);
+        animator.setDuration(duration);
+        animator.setInterpolator(new AccelerateInterpolator());
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationStart(final Animator animation) {
+                defer();
+            }
+
+            @Override
+            public void onAnimationEnd(final Animator animation) {
+                endDefer();
+            }
+        });
+
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(final ValueAnimator animation) {
+                setProgress((Integer) animation.getAnimatedValue());
+            }
+        });
+
+        animator.start();
+    }
+
+    private void bounceAnimation(final int startProgress) {
+        // Moving the progress by at least 1/4 of the total distance will invoke
+        // the "max" possible slack bouncing at the end progress value
+        final int diff = Math.abs(startProgress - mProgress);
+        final float diffPercent = Math.min(1f, 4 * diff / (float) getMax());
+        if (mAnimator != null) {
+            mAnimator.cancel();
+        }
+
+        mAnimator = ValueAnimator.ofFloat(0, diffPercent * getSlackBounce());
+        mAnimator.setInterpolator(INTERPOLATOR);
+        mAnimator.setDuration(1000L);
+        mAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(final ValueAnimator animation) {
+                mSlackBounce = (float) animation.getAnimatedValue();
+                dynamicRequestLayout();
+                invalidate();
+            }
+        });
+        mAnimator.start();
     }
 
     public int getProgress() {
