@@ -1,6 +1,6 @@
 # RopeProgressBar
 
-Android ProgressBar that "bends" under its own weight. Inspired by http://drbl.in/nwih
+Android ProgressBar that "bends" under its own weight.
 
 ![RopeProgressBar Animation](ropeprogressbar.gif)
 
@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.cdeange:RopeProgressBar:0.1.0'
+    compile 'com.github.cdeange:RopeProgressBar:0.1.1'
 }
 ```
 
