@@ -12,7 +12,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Looper;
 import android.util.AttributeSet;
@@ -44,9 +43,10 @@ public class RopeProgressBar extends View {
 
     private static final Interpolator INTERPOLATOR = new DampingInterpolator(5);
     private ValueAnimator mAnimator;
-    private float mSlackBounce;
+    private float mBounceX;
     private int mStartProgress;
     private boolean mDeferred;
+    private boolean mSlackSetByUser;
 
     private final Runnable mRequestLayoutRunnable = new Runnable() {
         @Override
@@ -104,6 +104,7 @@ public class RopeProgressBar extends View {
             width = a.getDimension(R.styleable.RopeProgressBar_strokeWidth, width);
             dynamicLayout = a.getBoolean(R.styleable.RopeProgressBar_dynamicLayout, false);
 
+            mSlackSetByUser = a.hasValue(R.styleable.RopeProgressBar_slack);
             a.recycle();
         }
 
@@ -134,7 +135,7 @@ public class RopeProgressBar extends View {
         if (mDynamicLayout) {
             // We need to calculate our new height, since the progress affect the slack
             if (Looper.getMainLooper() == Looper.myLooper()) {
-                requestLayout();
+                mRequestLayoutRunnable.run();
             } else {
                 post(mRequestLayoutRunnable);
             }
@@ -144,19 +145,23 @@ public class RopeProgressBar extends View {
     @Override
     protected synchronized void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
 
+        if (!mSlackSetByUser) {
+            // Slack is unset, default it to 10% of the width of the view
+            mSlack = MeasureSpec.getSize(widthMeasureSpec) * 0.1f;
+        }
+
         // Recalculate how tall the text needs to be, width is ignored
         final String progress = getBubbleText();
         mTextPaint.getTextBounds(progress, 0, progress.length(), mBounds);
 
         final int bubbleHeight = (int) Math.ceil(getBubbleVerticalDisplacement());
-        final float slack = mDynamicLayout ? getCurrentSlackHeight() : getSlack() + getSlackBounce();
+        final float slack = (mDynamicLayout) ? getCurrentSlackHeight() : getSlack();
 
         final float strokeWidth = getStrokeWidth();
-        final int dw = (int) Math.ceil(getPaddingLeft() + getPaddingRight() + strokeWidth);
         final int dh = (int) Math.ceil(getPaddingTop() + getPaddingBottom() + strokeWidth + slack);
 
         setMeasuredDimension(
-                resolveSizeAndState(dw, widthMeasureSpec, 0),
+                getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec),
                 resolveSizeAndState(dh + bubbleHeight, heightMeasureSpec, 0));
 
         // Make the triangle Path
@@ -181,7 +186,8 @@ public class RopeProgressBar extends View {
         final float max = getMax();
         final float offset = (max == 0) ? 0 : (getProgress() / max);
         final float slackHeight = getCurrentSlackHeight();
-        final float progressEnd = lerp(left, end, offset);
+        final float progressEnd =
+                clamp(lerp(left, end, offset) + (mBounceX * perp(offset)), left, end);
 
         // Draw the secondary background line
         mLinesPaint.setColor(mSecondaryColor);
@@ -208,10 +214,11 @@ public class RopeProgressBar extends View {
         mBubble.reset();
         mBubble.addRect(0, 0, bubbleWidth, bubbleHeight, Path.Direction.CW);
 
-        final float bubbleLeft = Math.min(
-                getWidth() - bubbleWidth, Math.max(
-                        0, progressEnd - (bubbleWidth / 2)));
         final float bubbleTop = Math.max(slackHeight, 0);
+        final float bubbleLeft = clamp(
+                progressEnd - (bubbleWidth / 2),
+                0,
+                getWidth() - bubbleWidth);
 
         final int saveCount = canvas.save();
         canvas.translate(bubbleLeft, bubbleTop);
@@ -219,10 +226,11 @@ public class RopeProgressBar extends View {
         canvas.drawPath(mBubble, mBubblePaint);
 
         // Draw the triangle part of the bubble
-        final float triangleLeft = Math.min(
-                getWidth() - getTriangleWidth(),
-                Math.max(0, progressEnd - (getTriangleWidth() / 2) - bubbleLeft));
         final float triangleTop = bubbleHeight;
+        final float triangleLeft = clamp(
+                progressEnd - (getTriangleWidth() / 2) - bubbleLeft,
+                0,
+                getWidth() - getTriangleWidth());
 
         mTriangle.offset(triangleLeft, triangleTop);
         canvas.drawPath(mTriangle, mBubblePaint);
@@ -240,7 +248,7 @@ public class RopeProgressBar extends View {
     private float getCurrentSlackHeight() {
         final float max = getMax();
         final float offset = (max == 0) ? 0 : (getProgress() / max);
-        return perp(offset) * (getSlack() + mSlackBounce);
+        return getSlack() * perp(offset);
     }
 
     private float getBubbleVerticalDisplacement() {
@@ -265,10 +273,6 @@ public class RopeProgressBar extends View {
 
     public float getTriangleHeight() {
         return dips(6);
-    }
-
-    public float getSlackBounce() {
-        return dips(4);
     }
 
     public String getBubbleText() {
@@ -296,7 +300,7 @@ public class RopeProgressBar extends View {
     }
 
     public synchronized void setProgress(int progress) {
-        progress = Math.max(0, Math.min(getMax(), progress));
+        progress = (int) clamp(progress, 0, getMax());
         if (progress == mProgress) {
             return;
         }
@@ -310,14 +314,15 @@ public class RopeProgressBar extends View {
         postInvalidate();
     }
 
-    public void animateProgress(int progress) {
+    public void animateProgress(final int progress) {
         // Speed of animation is interpolated from 0 --> MAX in 2s
         // Minimum time duration is 500ms because anything faster than that is waaaay too quick
-        progress = Math.max(0, Math.min(getMax(), progress));
-        final int diff = Math.abs(getProgress() - progress);
+        final int startProgress = getProgress();
+        final int endProgress = (int) clamp(progress, 0, getMax());
+        final int diff = Math.abs(getProgress() - endProgress);
         final long duration = Math.max(500L, (long) (2000L * (diff / (float) getMax())));
 
-        final ValueAnimator animator = ValueAnimator.ofInt(getProgress(), progress);
+        final ValueAnimator animator = ValueAnimator.ofInt(getProgress(), endProgress);
         animator.setDuration(duration);
         animator.setInterpolator(new AccelerateInterpolator());
         animator.addListener(new AnimatorListenerAdapter() {
@@ -328,6 +333,7 @@ public class RopeProgressBar extends View {
 
             @Override
             public void onAnimationEnd(final Animator animation) {
+                bounceAnimation(startProgress);
                 endDefer();
             }
         });
@@ -351,14 +357,13 @@ public class RopeProgressBar extends View {
             mAnimator.cancel();
         }
 
-        mAnimator = ValueAnimator.ofFloat(0, diffPercent * getSlackBounce());
+        mAnimator = ValueAnimator.ofFloat(0, diffPercent * getTriangleWidth());
         mAnimator.setInterpolator(INTERPOLATOR);
         mAnimator.setDuration(1000L);
         mAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(final ValueAnimator animation) {
-                mSlackBounce = (float) animation.getAnimatedValue();
-                dynamicRequestLayout();
+                mBounceX = (Float) animation.getAnimatedValue();
                 invalidate();
             }
         });
@@ -376,11 +381,11 @@ public class RopeProgressBar extends View {
 
             dynamicRequestLayout();
             mMax = max;
-            postInvalidate();
-
             if (mProgress > max) {
                 mProgress = max;
             }
+
+            postInvalidate();
         }
     }
 
@@ -458,6 +463,10 @@ public class RopeProgressBar extends View {
      */
     public Paint getTextPaint() {
         return new Paint(mTextPaint);
+    }
+
+    private float clamp(final float value, final float min, final float max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private float perp(float t) {
