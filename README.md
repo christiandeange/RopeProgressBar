@@ -7,8 +7,8 @@ Android ProgressBar that "bends" under its own weight.
 ---
 ###Attributes
 
-| Attribute            | Type      | Default                       | Usage                                                        |
-| -------------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
+| Attribute                | Type      | Default                       | Usage                                                        |
+| ------------------------ | --------- | ----------------------------- | ------------------------------------------------------------ |
 | `app:ropeMax`            | integer   | 0                             | The max value of the progress bar                            |
 | `app:ropeProgress`       | integer   | 0                             | The current value of the progress bar                        |
 | `app:ropePrimaryColor`   | color     | `@attr/colorControlActivated` | Color used for the progress completed                        |
@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.cdeange:RopeProgressBar:0.1.1'
+    compile 'com.github.cdeange:RopeProgressBar:0.1.2'
 }
 ```
 
