@@ -444,15 +444,15 @@ public class RopeProgressBar extends View {
         return mLinesPaint.getStrokeWidth();
     }
 
-    public void setTextPaint(final Paint paint) {
-        mTextPaint.set(paint);
+    public void setTypeface(final Typeface typeface) {
+        mTextPaint.setTypeface(typeface);
 
         requestLayout();
         invalidate();
     }
 
-    public void setProgressFormatter(final ProgressFormatter formatter) {
-        mFormatter = formatter;
+    public void setTextPaint(final Paint paint) {
+        mTextPaint.set(paint);
 
         requestLayout();
         invalidate();
@@ -463,6 +463,13 @@ public class RopeProgressBar extends View {
      */
     public Paint getTextPaint() {
         return new Paint(mTextPaint);
+    }
+
+    public void setProgressFormatter(final ProgressFormatter formatter) {
+        mFormatter = formatter;
+
+        requestLayout();
+        invalidate();
     }
 
     private float clamp(final float value, final float min, final float max) {

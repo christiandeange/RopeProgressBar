@@ -1,6 +1,7 @@
 package com.deange.ropeprogress;
 
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.os.Bundle;
 
 public class ThemedRopeActivity
@@ -19,5 +20,7 @@ public class ThemedRopeActivity
         paint.setColor(getResources().getColor(R.color.material_deep_teal_500));
         paint.setFakeBoldText(true);
         getRopeProgressBar().setTextPaint(paint);
+
+        getRopeProgressBar().setTypeface(Typeface.DEFAULT_BOLD);
     }
 }

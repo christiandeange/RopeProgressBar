@@ -17,7 +17,7 @@
                 android:layout_height="wrap_content"
                 app:primaryColor="@android:color/black"
                 app:secondaryColor="@android:color/darker_gray"
-                app:strokeWidth="2dp"
+                app:strokeWidth="16dp"
                 app:slack="64dp"
                 app:max="@integer/progress_max"/>
 
