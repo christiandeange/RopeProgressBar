@@ -15,8 +15,8 @@
         <com.deange.ropeprogressview.RopeProgressBar
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:dynamicLayout="true"
-                app:max="@integer/progress_max"/>
+                app:ropeDynamicLayout="true"
+                app:ropeMax="@integer/progress_max"/>
 
     </FrameLayout>
 

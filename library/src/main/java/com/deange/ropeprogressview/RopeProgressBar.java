@@ -95,16 +95,16 @@ public class RopeProgressBar extends View {
                 attrs, R.styleable.RopeProgressBar, defStyleAttr, 0);
 
         if (a != null) {
-            max = a.getInt(R.styleable.RopeProgressBar_max, max);
-            progress = a.getInt(R.styleable.RopeProgressBar_progress, progress);
+            max = a.getInt(R.styleable.RopeProgressBar_ropeMax, max);
+            progress = a.getInt(R.styleable.RopeProgressBar_ropeProgress, progress);
 
-            primaryColor = a.getColor(R.styleable.RopeProgressBar_primaryColor, primaryColor);
-            secondaryColor = a.getColor(R.styleable.RopeProgressBar_secondaryColor, secondaryColor);
-            slack = a.getDimension(R.styleable.RopeProgressBar_slack, slack);
-            width = a.getDimension(R.styleable.RopeProgressBar_strokeWidth, width);
-            dynamicLayout = a.getBoolean(R.styleable.RopeProgressBar_dynamicLayout, false);
+            primaryColor = a.getColor(R.styleable.RopeProgressBar_ropePrimaryColor, primaryColor);
+            secondaryColor = a.getColor(R.styleable.RopeProgressBar_ropeSecondaryColor, secondaryColor);
+            slack = a.getDimension(R.styleable.RopeProgressBar_ropeSlack, slack);
+            width = a.getDimension(R.styleable.RopeProgressBar_ropeStrokeWidth, width);
+            dynamicLayout = a.getBoolean(R.styleable.RopeProgressBar_ropeDynamicLayout, false);
 
-            mSlackSetByUser = a.hasValue(R.styleable.RopeProgressBar_slack);
+            mSlackSetByUser = a.hasValue(R.styleable.RopeProgressBar_ropeSlack);
             a.recycle();
         }
 

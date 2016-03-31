@@ -15,11 +15,11 @@
         <com.deange.ropeprogressview.RopeProgressBar
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:primaryColor="@android:color/black"
-                app:secondaryColor="@android:color/darker_gray"
-                app:strokeWidth="16dp"
-                app:slack="64dp"
-                app:max="@integer/progress_max"/>
+                app:ropePrimaryColor="@android:color/black"
+                app:ropeSecondaryColor="@android:color/darker_gray"
+                app:ropeStrokeWidth="16dp"
+                app:ropeSlack="64dp"
+                app:ropeMax="@integer/progress_max"/>
 
     </FrameLayout>
 
