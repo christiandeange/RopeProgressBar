@@ -5,7 +5,7 @@ Android ProgressBar that "bends" under its own weight.
 ![RopeProgressBar Animation](ropeprogressbar.gif)
 
 ---
-###Attributes
+### Attributes
 
 | Attribute                | Type      | Default                       | Usage                                                        |
 | ------------------------ | --------- | ----------------------------- | ------------------------------------------------------------ |
@@ -21,7 +21,7 @@ Android ProgressBar that "bends" under its own weight.
 
 
 ---
-###Download
+### Download
 
 ```groovy
 repositories {
@@ -36,11 +36,11 @@ dependencies {
 ```
 
 ---
-###Developed By
+### Developed By
 - Christian De Angelis - <de@ngelis.com>
 
 ---
-###License
+### License
 
 ```
 Copyright 2016 Christian De Angelis
